@@ -12,9 +12,7 @@ BRICK_RED = (178, 34, 34)
 WHITE_COLOR = (255, 255, 255)
 GRAY = (70, 70, 70)
 FPS = 60
-
-# Global object list
-game_objects = []
+tileSize = 40
 
 # Pygame setup
 PATH = os.path.dirname(__file__) + os.path.sep
@@ -22,9 +20,10 @@ window = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_icon(pygame.image.load('leaves.png'))
 pygame.display.set_caption("Battle City Remake")
 clock = pygame.time.Clock()
+game_objects = []
 
 # Block class
-class Block:
+class Block_1:
     def __init__(self, px, py, size):
         game_objects.append(self)
         self.type = 'block'
@@ -43,6 +42,53 @@ class Block:
         if self.hp <= 0:
             game_objects.remove(self)
 
+class Block_2:
+    def __init__(self, px, py, size):
+        game_objects.append(self)
+        self.type = 'block'
+        self.rect = pygame.Rect(px, py, size, size)
+        self.hp = 1000
+        self.image = pygame.transform.scale(pygame.image.load('steel_wall.png'), (size, size))
+
+    def update(self):
+        pass
+
+    def draw(self):
+        window.blit(self.image, self.rect.topleft)
+
+    def damage(self, value):
+        self.hp -= value
+        if self.hp <= 0:
+            game_objects.remove(self)
+
+# Карта уровня
+level_map = [
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+]
+
+# Генерация карты
+for row_idx, row in enumerate(level_map):
+    for col_idx, val in enumerate(row):
+        if val == 1:
+            Block_1(col_idx * tileSize, row_idx * tileSize, tileSize)
+        if val == 2:
+            Block_2(col_idx * tileSize, row_idx * tileSize, tileSize)
+
+        
 
 # Sprite base class
 class GameSprite(pygame.sprite.Sprite):
@@ -114,7 +160,6 @@ class Bullet(GameSprite):
         self.rect.y -= self.speed
         if self.rect.y <= 0:
             self.kill()
-        # Collision with blocks
         for block in game_objects:
             if block.rect.colliderect(self.rect):
                 block.damage(1)
@@ -124,7 +169,7 @@ class Bullet(GameSprite):
 bullets = pygame.sprite.Group()
 
 # Initialize player tank
-player_tank = Tank("TESTtank.png", SCREEN_WIDTH - 95, 25, 70, 70, 4)
+player_tank = Tank("TESTtank.png", SCREEN_WIDTH - 600, 470, 70, 70, 4)
 
 # Level and menu system
 class Level:
@@ -223,19 +268,6 @@ current_level = None
 menu = MainMenu(window)
 level_select_menu = LevelSelectMenu(window)
 
-for _ in range(10):
-    while True:
-        x = randint(0, SCREEN_WIDTH // 50 - 1) * 50
-        y = randint(0, SCREEN_HEIGHT // 50 - 1) * 50
-        rect = pygame.Rect(x, y, 50, 50)
-        fined = False
-        for obj in game_objects:
-            if rect.colliderect(obj.rect):
-                fined = True
-        if not fined:
-            break
-    Block(x, y, 50)
-
 # Main game loop
 running = True
 while running:
@@ -273,7 +305,7 @@ while running:
         level_select_menu.draw()
 
     else:
-        window.fill((0, 0, 0))
+        window.fill((255, 255, 255))
         if current_level:
             current_level.update()
             current_level.draw(window)
