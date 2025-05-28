@@ -1,12 +1,16 @@
 import pygame
 import os
-from random import randint
+import random
 
 pygame.init()
 
 # Constants
-SCREEN_WIDTH = 800
+GAME_WIDTH = 600
+PANEL_WIDTH = 200
+SCREEN_WIDTH = GAME_WIDTH + PANEL_WIDTH
 SCREEN_HEIGHT = 600
+PLAYER_SPAWN_X = GAME_WIDTH - 95
+PLAYER_SPAWN_Y = 25
 RED_COLOR = (255, 0, 0)
 BRICK_RED = (178, 34, 34)
 WHITE_COLOR = (255, 255, 255)
@@ -19,9 +23,39 @@ game_objects = []
 # Pygame setup
 PATH = os.path.dirname(__file__) + os.path.sep
 window = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-pygame.display.set_icon(pygame.image.load('leaves.png'))
+pygame.display.set_icon(pygame.image.load('textures/leaves.png'))
 pygame.display.set_caption("Battle City Remake")
 clock = pygame.time.Clock()
+
+lives = 3
+paused = False
+
+class SlidePanel:
+    def __init__(self):
+        self.font_large = pygame.font.SysFont("Courier New", 36, bold=True)
+        self.font_small = pygame.font.SysFont("Courier New", 28)
+        self.pause_btn = pygame.Rect(GAME_WIDTH + 40, 100, 120, 40)
+
+    def draw(self, surface):
+        pygame.draw.rect(surface, (30, 30, 30), (GAME_WIDTH, 0, PANEL_WIDTH, SCREEN_HEIGHT))
+        pygame.draw.line(surface, WHITE_COLOR, (GAME_WIDTH, 0), (GAME_WIDTH, SCREEN_HEIGHT), 2)
+
+        pygame.draw.rect(surface, GRAY, self.pause_btn)
+        pygame.draw.rect(surface, WHITE_COLOR, self.pause_btn, 2)
+        label = "RESUME" if paused else "PAUSE"
+        pause_txt = self.font_small.render(label, True, WHITE_COLOR)
+        surface.blit(pause_txt, pause_txt.get_rect(center=self.pause_btn.center))
+
+        lives_txt = self.font_small.render(f"Lives: {lives}", True, WHITE_COLOR)
+
+        #surface.blit(score_txt, (GAME_WIDTH + 30, 150))
+        surface.blit(lives_txt, (GAME_WIDTH + 30, 190))
+
+    def handle_event(self, event):
+        global paused
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if self.pause_btn.collidepoint(event.pos):
+                paused = not paused
 
 # Block class
 class Block:
@@ -30,7 +64,7 @@ class Block:
         self.type = 'block'
         self.rect = pygame.Rect(px, py, size, size)
         self.hp = 1
-        self.image = pygame.transform.scale(pygame.image.load('brick_wall.png'), (size, size))
+        self.image = pygame.transform.scale(pygame.image.load('textures/brick_wall.png'), (size, size))
 
     def update(self):
         pass
@@ -61,59 +95,161 @@ class GameSprite(pygame.sprite.Sprite):
 
 # Player tank class
 class Tank(GameSprite):
+    def __init__(self, player_image, x, y, width, height, speed):
+        super().__init__(player_image, x, y, width, height, speed)
+        self.direction = 'UP'
     def update(self):
         oldX, oldY = self.rect.topleft
         keys_pressed = pygame.key.get_pressed()
         if keys_pressed[pygame.K_a] and self.rect.x > 0:
             self.rect.x -= self.speed
+            self.direction = 'LEFT'
         if keys_pressed[pygame.K_d] and self.rect.x < SCREEN_WIDTH - self.width:
             self.rect.x += self.speed
+            self.direction = 'RIGHT'
         if keys_pressed[pygame.K_w] and self.rect.y > 0:
             self.rect.y -= self.speed
+            self.direction = 'UP'
         if keys_pressed[pygame.K_s] and self.rect.y < SCREEN_HEIGHT - self.height:
             self.rect.y += self.speed
+            self.direction = "DOWN"
         
         for obj in game_objects:
             if obj != self and self.rect.colliderect(obj.rect):
                 self.rect.topleft = oldX, oldY
 
     def fire(self):
-        bullet = Bullet('TESTbullet.png', self.rect.centerx, self.rect.top, 15, 20, 10)
+        x, y = self.rect.centerx, self.rect.centery
+
+        if self.direction == 'UP':
+            y = self.rect.top
+        elif self.direction == 'DOWN':
+            y = self.rect.bottom
+        elif self.direction == 'LEFT':
+            x = self.rect.left
+        elif self.direction == 'RIGHT':
+            x = self.rect.right
+
+        bullet = Bullet('textures/bullet.png', x, y, 15, 20, 10, self.direction)
         bullets.add(bullet)
 
+    def respaewn(self):
+        self.rect.x = PLAYER_SPAWN_X
+        self.rect.y = PLAYER_SPAWN_Y
+
+class EnemyManager:
+    def __init__(self):
+        self.enemies = pygame.sprite.Group()
+        self.spawn_delay = 1000
+        self.last_spawn_time = pygame.time.get_ticks()
+        self.max_enemies = 3
+
+    def spawn_enemy(self):
+        enemy = Enemy_Tank(random.randint(0, GAME_WIDTH - 60), 0)
+        self.enemies.add(enemy)
+
+    def update(self):
+        now = pygame.time.get_ticks()
+        if len(self.enemies) < self.max_enemies and now - self.last_spawn_time >= self.spawn_delay:
+            self.spawn_enemy()
+            self.last_spawn_time = now
+        self.enemies.update()
+
+        for enemy in self.enemies:
+            if random.randint(0, 100) < 2:
+                enemy.fire()
+
+    def draw(self, screen):
+        self.enemies.draw(screen)
 # Enemy tank class
 class Enemy_Tank(GameSprite):
-    direction = "right"
-    directionn = "down"
+    def __init__(self, x, y):
+        super().__init__('textures/enemy.png', x, y, 60, 60, 2)
+        self.directions = ["up", "down", "left", "right"]
+        self.direction = random.choice(self.directions)
+        self.change_direction_timer = pygame.time.get_ticks()
 
-    def update_r_l(self, start, end):
-        if self.direction == "right":
-            self.rect.x += self.speed
+    def update(self):
+        # Рух
+        self.move()
+        old_x, old_y = self.rect.topleft
+
+        now = pygame.time.get_ticks()
+        if now - self.change_direction_timer > 2000:
+            self.direction = random.choice(self.directions)
+            self.change_direction_timer = now
+
+        if self.rect.colliderect(player_tank.rect):
+            self.rect.topleft = old_x, old_y
+            self.direction = random.choice(self.directions)
+
+    def move(self):
+        old_pos = self.rect.topleft
+
+        if self.direction == "up":
+            self.rect.y -= self.speed
+        elif self.direction == "down":
+            self.rect.y += self.speed
         elif self.direction == "left":
             self.rect.x -= self.speed
+        elif self.direction == "right":
+            self.rect.x += self.speed
 
-        if self.direction == "right" and self.rect.x >= end:
-            self.direction = "left"
-        elif self.direction == "left" and self.rect.x <= start:
-            self.direction = "right"
+        if self.rect.left < 0 or self.rect.right > GAME_WIDTH or self.rect.top < 0 or self.rect.bottom > SCREEN_HEIGHT:
+            self.rect.topleft = old_pos
+            self.direction = random.choice(self.directions)
 
-    def update_u_d(self, start, end):
-        if self.directionn == "down":
-            self.rect.y += self.speed
-        elif self.directionn == "up":
-            self.rect.y -= self.speed
+        for obj in game_objects:
+            if obj.type == 'block' and self.rect.colliderect(obj.rect):
+                self.rect.topleft = old_pos
+                self.direction = random.choice(self.directions)
+                break
 
-        if self.directionn == "down" and self.rect.y >= end:
-            self.directionn = "up"
-        elif self.directionn == "up" and self.rect.y <= start:
-            self.directionn = "down"
+    def fire(self):
+        bullet = EnemyBullet("textures/bullet.png", self.rect.centerx, self.rect.bottom, 15, 20, 5)
+        enemy_bullets.add(bullet)
 
+class EnemyBullet(GameSprite):
+    def update(self):
+        self.rect.y += self.speed
+        if self.rect.y >= SCREEN_HEIGHT:
+            self.kill()
+
+        if self.rect.colliderect(player_tank.rect):
+            self.kill()
+            global lives
+            lives -= 1
+            player_tank.respaewn()
 # Bullet class
 class Bullet(GameSprite):
+    def __init__(self, bullet_image, x, y, width, height, speed, direction):
+        super().__init__(bullet_image, x, y, width, height, speed)
+        self.direction = direction
+
     def update(self):
         self.rect.y -= self.speed
         if self.rect.y <= 0:
             self.kill()
+
+        if self.direction == 'UP':
+            self.rect.y -= self.speed
+        elif self.direction == 'DOWN':
+            self.rect.y += self.speed
+        elif self.direction == 'LEFT':
+            self.rect.x -= self.speed
+        elif self.direction == 'RIGHT':
+            self.rect.x += self.speed
+
+        if (self.rect.y < 0 or self.rect.y > SCREEN_HEIGHT or
+                self.rect.x < 0 or self.rect.x > SCREEN_WIDTH):
+            self.kill()
+
+        for enemy in enemy_manager.enemies:
+            if self.rect.colliderect(enemy.rect):
+                self.kill()
+                enemy.kill()
+                score_manager.add_score(100)
+                break
         # Collision with blocks
         for block in game_objects:
             if block.rect.colliderect(self.rect):
@@ -121,10 +257,29 @@ class Bullet(GameSprite):
                 self.kill()
                 break
 
+        for enemy in enemy_manager.enemies:
+            if self.rect.colliderect(enemy.rect):
+                self.kill()
+                enemy.kill()
+                break
+
 bullets = pygame.sprite.Group()
+enemy_bullets = pygame.sprite.Group()
 
 # Initialize player tank
-player_tank = Tank("TESTtank.png", SCREEN_WIDTH - 95, 25, 70, 70, 4)
+player_tank = Tank("textures/player.png", PLAYER_SPAWN_X, PLAYER_SPAWN_Y,  70, 70, 4)
+
+class ScoreManager:
+    def __init__(self):
+        self.score = 0
+        self.font = pygame.font.SysFont("Courier New", 28, bold=True)
+
+    def add_score(self, points):
+        self.score += points
+
+    def draw(self, screen):
+        text = self.font.render(f"Score: {self.score}", True, WHITE_COLOR)
+        screen.blit(text, (GAME_WIDTH + 30, 150))
 
 # Level and menu system
 class Level:
@@ -222,11 +377,14 @@ in_level_select_menu = False
 current_level = None
 menu = MainMenu(window)
 level_select_menu = LevelSelectMenu(window)
+panel = SlidePanel()
+enemy_manager = EnemyManager()
+score_manager = ScoreManager()
 
 for _ in range(10):
     while True:
-        x = randint(0, SCREEN_WIDTH // 50 - 1) * 50
-        y = randint(0, SCREEN_HEIGHT // 50 - 1) * 50
+        x = random.randint(0, SCREEN_WIDTH // 50 - 1) * 50
+        y = random.randint(0, SCREEN_HEIGHT // 50 - 1) * 50
         rect = pygame.Rect(x, y, 50, 50)
         fined = False
         for obj in game_objects:
@@ -262,6 +420,8 @@ while running:
                 level_number = int(result.split("_")[-1])
                 current_level = Level(level_number)
                 in_level_select_menu = False
+        else:
+            panel.handle_event(event)
 
     # Drawing
     if in_main_menu:
@@ -286,7 +446,15 @@ while running:
         player_tank.reset()
 
         bullets.update()
+        enemy_bullets.update()
+
+        pygame.sprite.groupcollide(bullets, enemy_bullets, True, True)
         bullets.draw(window)
+        enemy_bullets.draw(window)
+        panel.draw(window)
+        enemy_manager.update()
+        enemy_manager.draw(window)
+        score_manager.draw(window)
 
     pygame.display.update()
     clock.tick(FPS)
