@@ -1,137 +1,57 @@
 import pygame
 import os
+import random
+
+from settings import *
+from menu import SlidePanel, MainMenu, LevelSelectMenu
+from objects import Block1, Block2, Block3, Tank, EnemyManager, Bullet, EnemyBullet, ScoreManager, game_objects
+from levels import Level
+
+lives = 3
+paused = False
+bullets = pygame.sprite.Group()
+enemy_bullets = pygame.sprite.Group()
+
 pygame.init()
 
-
-
-SCREEN_WIDTH = 800
-SCREEN_HEIGHT = 600
-RED_COLOR = (255, 0, 0)
-BRICK_RED = (178, 34, 34)
-WHITE_COLOR = (255, 0, 0)
-GRAY = (70, 70, 7)
-FPS = 60
-
-PATH = os.path.dirname(__file__) + os.path.sep
-
-
-
-####
-
-#class map
-
-#class tank
-
-#class enemy tank
-
-class Level:
-    def __init__(self, level_number: int):
-        pass
-
-    def load_map(self, level_number: int):
-        pass
-
-    def update(self):
-        pass
-
-    def draw(self, screen):
-        pass
-
-class MainMenu:
-    def __init__(self, screen):
-        self.screen = screen
-        self.clock = pygame.time.Clock()
-        self.title_font = pygame.font.SysFont("Courier New", 72, bold=True)
-        self.button_font = pygame.font.SysFont("Courier New", 36, bold=True)
-        self.button_width = 240
-        self.button_height = 60
-        self.button_rect = pygame.Rect(
-            SCREEN_WIDTH // 2 - self.button_width // 2,
-            SCREEN_HEIGHT // 2 - self.button_height // 4,
-            self.button_width,
-            self.button_height
-        )
-
-    def draw_title(self):
-        title_text = "BATTLE CITY REMAKE"
-        title_surface = self.title_font.render(title_text, True, BRICK_RED)
-        title_rect = title_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 4))
-        self.screen.blit(title_surface, title_rect)
-
-    def draw_button(self):
-        pygame.draw.rect(self.screen, GRAY, self.button_rect)
-        pygame.draw.rect(self.screen, WHITE_COLOR, self.button_rect, 3)
-
-        text_surface = self.button_font.render("PLAY GAME", True, WHITE_COLOR)
-        text_rect = text_surface.get_rect(center=self.button_rect.center)
-        self.screen.blit(text_surface, text_rect)
-
-    def handle_event(self, event):
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            if self.button_rect.collidepoint(event.pos):
-                return "start_game"
-        return None
-
-
-class LevelSelectMenu:
-    def __init__(self, screen):
-        self.screen = screen
-        self.title_font = pygame.font.SysFont("Courier New", 60, bold=True)
-        self.button_font = pygame.font.SysFont("Courier New", 28, bold=True)
-        self.level_buttons = []
-        self.menu_button = pygame.Rect(20, 20, 120, 50)
-
-        for i in range(3):
-            rect = pygame.Rect(150 + i * 200, 250, 150, 150)
-            self.level_buttons.append((i + 1, rect))
-
-    def draw(self):
-        self.screen.fill((0, 0, 0))
-        title_surface = self.title_font.render("SELECT LEVEL", True, BRICK_RED)
-        title_rect = title_surface.get_rect(center=(SCREEN_WIDTH // 2, 100))
-        self.screen.blit(title_surface, title_rect)
-
-        for level_number, rect in self.level_buttons:
-            pygame.draw.rect(self.screen, GRAY, rect)
-            pygame.draw.rect(self.screen, WHITE_COLOR, rect, 3)
-            text_surface = self.button_font.render(f"Level {level_number}", True, WHITE_COLOR)
-            text_rect = text_surface.get_rect(center=rect.center)
-            self.screen.blit(text_surface, text_rect)
-
-        pygame.draw.rect(self.screen, BRICK_RED, self.menu_button)
-        pygame.draw.rect(self.screen, WHITE_COLOR, self.menu_button, 3)
-        menu_text = self.button_font.render("MENU", True, WHITE_COLOR)
-        menu_text_rect = menu_text.get_rect(center=self.menu_button.center)
-        self.screen.blit(menu_text, menu_text_rect)
-
-    def handle_event(self, event):
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            if self.menu_button.collidepoint(event.pos):
-                return "back_to_main"
-
-            for level_number, rect in self.level_buttons:
-                if rect.collidepoint(event.pos):
-                    return f"start_level_{level_number}"
-        return None
-
-# Ініціалізація вікна
-screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+window = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+pygame.display.set_icon(pygame.image.load('textures/leaves.png'))
 pygame.display.set_caption("Battle City Remake")
 clock = pygame.time.Clock()
-
 
 in_main_menu = True
 in_level_select_menu = False
 current_level = None
-menu = MainMenu(screen)
-level_select_menu = LevelSelectMenu(screen)
+menu = MainMenu(window)
+level_select_menu = LevelSelectMenu(window)
+panel = SlidePanel()
+player_tank = Tank("textures/player.png", PLAYER_SPAWN_X, PLAYER_SPAWN_Y, 70, 70, 4)
+enemy_manager = EnemyManager(player_tank, enemy_bullets)
+score_manager = ScoreManager()
 
+for _ in range(10):
+    while True:
+        x = random.randint(0, SCREEN_WIDTH // 50 - 1) * 50
+        y = random.randint(0, SCREEN_HEIGHT // 50 - 1) * 50
+        rect = pygame.Rect(x, y, 50, 50)
+        fined = False
+        for obj in game_objects:
+            if rect.colliderect(obj.rect):
+                fined = True
+        if not fined:
+            break
+    Block1(x, y, 50)
 
+# Main game loop
 running = True
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_SPACE:
+                player_tank.fire(bullets)
 
         if in_main_menu:
             result = menu.handle_event(event)
@@ -148,18 +68,77 @@ while running:
                 level_number = int(result.split("_")[-1])
                 current_level = Level(level_number)
                 in_level_select_menu = False
+        else:
+            paused = panel.handle_event(event, paused)
 
     if in_main_menu:
-        screen.fill((0, 0, 0))
+        window.fill((0, 0, 0))
         menu.draw_title()
         menu.draw_button()
+
     elif in_level_select_menu:
         level_select_menu.draw()
+
     else:
-        screen.fill((0, 0, 0))
+        window.fill((0, 0, 0))
         if current_level:
             current_level.update()
-            current_level.draw(screen)
+            current_level.draw(window)
+
+        # Add pause text
+        if not paused:
+            for obj in game_objects:
+                obj.update()
+                obj.draw(window)
+
+            player_tank.update()
+            bullets.update()
+            enemy_bullets.update()
+            enemy_manager.update()
+        else:
+
+            for obj in game_objects:
+                obj.draw(window)
+
+        player_tank.reset(window)
+
+        pygame.sprite.groupcollide(bullets, enemy_bullets, True, True)
+        bullets.draw(window)
+        enemy_bullets.draw(window)
+        enemy_manager.draw(window)
+        panel.draw(window, paused, lives)
+        score_manager.draw(window)
+
+        # Add pause text
+        if paused:
+            overlay = pygame.Surface((GAME_WIDTH, SCREEN_HEIGHT))
+            overlay.set_alpha(180)
+            overlay.fill((0, 0, 0))
+            window.blit(overlay, (0, 0))
+
+            pause_font = pygame.font.SysFont("Courier New", 72, bold=True)
+            pause_text = pause_font.render("PAUSED", True, WHITE_COLOR)
+            pause_rect = pause_text.get_rect(center=(GAME_WIDTH // 2, SCREEN_HEIGHT // 2))
+            window.blit(pause_text, pause_rect)
+
+        for obj in game_objects:
+            obj.update()
+            obj.draw(window)
+
+        player_tank.update()
+        player_tank.reset(window)
+
+        bullets.update(enemy_manager, score_manager)
+        bullets.update()
+
+        pygame.sprite.groupcollide(bullets, enemy_bullets, True, True)
+
+        bullets.draw(window)
+        enemy_bullets.draw(window)
+        panel.draw(window, paused, lives)
+        enemy_manager.update()
+        enemy_manager.draw(window)
+        score_manager.draw(window)
 
     pygame.display.update()
     clock.tick(FPS)
