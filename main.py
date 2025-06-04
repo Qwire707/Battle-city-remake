@@ -4,12 +4,13 @@ import random
 
 from settings import *
 from menu import SlidePanel, MainMenu, LevelSelectMenu
-from objects import Block1, Block2, Block3, Tank, EnemyManager, Bullet, EnemyBullet, ScoreManager, game_objects
+from objects import Block1, Block2, Block3, Tank, EnemyManager, Bullet, EnemyBullet, ScoreManager, SuperEnemyManager, SuperEnemyTank, game_objects
 from levels import Level
 
 lives = 3
+score = 0
 paused = False
-bullets = pygame.sprite.Group()
+bullets = pygame.sprite.Group() 
 enemy_bullets = pygame.sprite.Group()
 
 pygame.init()
@@ -25,9 +26,10 @@ current_level = None
 menu = MainMenu(window)
 level_select_menu = LevelSelectMenu(window)
 panel = SlidePanel()
-player_tank = Tank("textures/player.png", PLAYER_SPAWN_X, PLAYER_SPAWN_Y, 70, 70, 4)
+player_tank = Tank("textures/player.png", PLAYER_SPAWN_X, PLAYER_SPAWN_Y, 50, 50, 4)
 enemy_manager = EnemyManager(player_tank, enemy_bullets)
 score_manager = ScoreManager()
+super_enemy_manager = SuperEnemyManager(player_tank, enemy_bullets)
 
 for _ in range(10):
     while True:
@@ -92,7 +94,7 @@ while running:
                 obj.draw(window)
 
             player_tank.update()
-            bullets.update()
+            bullets.update(enemy_manager, score_manager, super_enemy_manager)
             enemy_bullets.update()
             enemy_manager.update()
         else:
@@ -105,7 +107,6 @@ while running:
         pygame.sprite.groupcollide(bullets, enemy_bullets, True, True)
         bullets.draw(window)
         enemy_bullets.draw(window)
-        enemy_manager.draw(window)
         panel.draw(window, paused, lives)
         score_manager.draw(window)
 
@@ -128,17 +129,22 @@ while running:
         player_tank.update()
         player_tank.reset(window)
 
-        bullets.update(enemy_manager, score_manager)
-        bullets.update()
+        bullets.update(enemy_manager, score_manager, super_enemy_manager)
 
         pygame.sprite.groupcollide(bullets, enemy_bullets, True, True)
 
         bullets.draw(window)
         enemy_bullets.draw(window)
         panel.draw(window, paused, lives)
-        enemy_manager.update()
-        enemy_manager.draw(window)
         score_manager.draw(window)
+        if score_manager.score < 1000:
+            enemy_manager.update()
+            enemy_manager.draw(window)
+        else:
+            super_enemy_manager.update()
+            super_enemy_manager.draw(window)
+
+        
 
     pygame.display.update()
     clock.tick(FPS)
