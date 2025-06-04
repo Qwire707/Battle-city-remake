@@ -1,6 +1,6 @@
 import pygame
 from settings import *
-from objects import Block1, Block2, Block3, EnemyManager
+from objects import Block1, Block2, Block3, Base, EnemyManager, game_objects
 
 level_map2 = [
     [0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
@@ -17,7 +17,7 @@ level_map2 = [
     [0,0,0,1,0,1,3,3,3,3,3,1,0,0,0,0,0,1,1,3],
     [0,1,1,1,0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,3],
     [0,0,0,0,0,0,0,1,1,1,0,1,1,1,0,1,1,1,0,0],
-    [0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,1,4,1,0,0,0,0,0,0,0,0,0,0],
 ]
 
 level_map3 = [
@@ -35,7 +35,7 @@ level_map3 = [
     [0,1,1,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,2,0],
     [0,0,1,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0],
     [1,0,1,0,1,0,0,1,1,1,0,0,1,1,1,1,0,0,2,2],
-    [0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,1,0,0,2,3],
+    [0,0,0,0,0,0,0,1,4,1,0,0,0,0,0,1,0,0,2,3],
 ]
 
 level_map1= [
@@ -53,28 +53,49 @@ level_map1= [
     [0,1,1,1,2,0,0,1,1,2,0,0,2,0,0,1,0,1,1,0],
     [0,0,1,1,2,0,0,0,0,0,0,0,2,0,0,1,1,1,0,0],
     [0,0,3,3,2,0,0,1,1,1,0,0,2,0,0,0,1,1,0,0],
-    [0,3,3,0,0,0,0,1,0,1,0,0,0,0,0,0,0,1,1,0],
+    [0,3,3,0,0,0,0,1,4,1,0,0,0,0,0,0,0,1,1,0],
 ]
-
-for row_idx, row in enumerate(level_map1):
-    for col_idx, val in enumerate(row):
-        if val == 1:
-            Block1(col_idx * tileSize, row_idx * tileSize, tileSize)
-        if val == 2:
-            Block2(col_idx * tileSize, row_idx * tileSize, tileSize)
-        if val == 3:
-            Block3(col_idx * tileSize, row_idx * tileSize, tileSize)
 
 class Level:
     def __init__(self, level_number: int):
         self.level_number = level_number
+        self.base = None
+        self.reset()
 
     def load_map(self, level_number: int):
-        pass
+        game_objects.clear()
+        self.base = None
+
+        if level_number == 1:
+            level_map = level_map1
+        elif level_number == 2:
+            level_map = level_map2
+        elif level_number == 3:
+            level_map = level_map3
+        else:
+            return
+
+        for row_idx, row in enumerate(level_map):
+            for col_idx, val in enumerate(row):
+                x = col_idx * tileSize
+                y = row_idx * tileSize
+                if val == 1:
+                    Block1(x, y, tileSize)
+                elif val == 2:
+                    Block2(x, y, tileSize)
+                elif val == 3:
+                    Block3(x, y, tileSize)
+                elif val == 4:
+                    self.base = Base(x, y, tileSize)
 
     def update(self):
         pass
 
     def draw(self, screen):
-        pass
+        for obj in game_objects:
+            obj.draw(screen)
+        if self.base and self.base.alive:
+            self.base.draw(screen)
 
+    def reset(self):
+        self.load_map(self.level_number)

@@ -7,7 +7,7 @@ class SlidePanel:
         self.font_small = pygame.font.SysFont("Courier New", 28)
         self.pause_btn = pygame.Rect(GAME_WIDTH + 40, 100, 120, 40)
 
-    def draw(self, surface, paused, lives):
+    def draw(self, surface, paused, player_tank):
         pygame.draw.rect(surface, (30, 30, 30), (GAME_WIDTH, 0, PANEL_WIDTH, SCREEN_HEIGHT))
         pygame.draw.line(surface, WHITE_COLOR, (GAME_WIDTH, 0), (GAME_WIDTH, SCREEN_HEIGHT), 2)
 
@@ -17,7 +17,7 @@ class SlidePanel:
         pause_txt = self.font_small.render(label, True, WHITE_COLOR)
         surface.blit(pause_txt, pause_txt.get_rect(center=self.pause_btn.center))
 
-        lives_txt = self.font_small.render(f"Lives: {lives}", True, WHITE_COLOR)
+        lives_txt = self.font_small.render(f"Lives: {player_tank.lives}", True, WHITE_COLOR)
 
         surface.blit(lives_txt, (GAME_WIDTH + 30, 190))
 
@@ -101,4 +101,43 @@ class LevelSelectMenu:
             for level_number, rect in self.level_buttons:
                 if rect.collidepoint(event.pos):
                     return f"start_level_{level_number}"
+        return None
+
+class EndGameScreen:
+    def __init__(self, window, result_text, score):
+        self.window = window
+        self.result_text = result_text
+        self.score = score
+        self.font = pygame.font.SysFont("Courier New", 50, bold=True)
+        self.button_font = pygame.font.SysFont("Courier New", 36)
+        self.buttons = {
+            "retry": pygame.Rect(SCREEN_WIDTH // 2 - 120, SCREEN_HEIGHT // 2 + 50, 100, 50),
+            "exit": pygame.Rect(SCREEN_WIDTH // 2 + 20, SCREEN_HEIGHT // 2 + 50, 100, 50)
+        }
+
+    def draw(self):
+        overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+        overlay.set_alpha(200)
+        overlay.fill((30, 30, 30))
+        self.window.blit(overlay, (0, 0))
+
+        result_surf = self.font.render(self.result_text, True, WHITE_COLOR)
+        score_surf = self.button_font.render(f"Score: {self.score}", True, WHITE_COLOR)
+
+        self.window.blit(result_surf, result_surf.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 100)))
+        self.window.blit(score_surf, score_surf.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 40)))
+
+        for name, rect in self.buttons.items():
+            pygame.draw.rect(self.window, (100, 100, 100), rect)
+            pygame.draw.rect(self.window, WHITE_COLOR, rect, 3)
+            text = self.button_font.render("Retry" if name == "retry" else "Exit", True, WHITE_COLOR)
+            self.window.blit(text, text.get_rect(center=rect.center))
+
+    def handle_event(self, event):
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            pos = event.pos
+            if self.buttons["retry"].collidepoint(pos):
+                return "retry"
+            elif self.buttons["exit"].collidepoint(pos):
+                return "exit"
         return None

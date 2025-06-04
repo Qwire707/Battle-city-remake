@@ -3,13 +3,17 @@ import os
 import random
 
 from settings import *
-from menu import SlidePanel, MainMenu, LevelSelectMenu
-from objects import Block1, Block2, Block3, Tank, EnemyManager, Bullet, EnemyBullet, ScoreManager, game_objects
+from menu import SlidePanel, MainMenu, LevelSelectMenu, EndGameScreen
+from objects import Block1, Block2, Block3, Tank, EnemyManager, Bullet, EnemyBullet, ScoreManager, SuperEnemyManager, SuperEnemyTank, game_objects
 from levels import Level
 
 lives = 3
+score = 0
 paused = False
-bullets = pygame.sprite.Group()
+game_over = False
+you_win = False
+end_screen = None
+bullets = pygame.sprite.Group() 
 enemy_bullets = pygame.sprite.Group()
 
 pygame.init()
@@ -25,9 +29,10 @@ current_level = None
 menu = MainMenu(window)
 level_select_menu = LevelSelectMenu(window)
 panel = SlidePanel()
-player_tank = Tank("textures/player.png", PLAYER_SPAWN_X, PLAYER_SPAWN_Y, 70, 70, 4)
+player_tank = Tank("textures/player.png", PLAYER_SPAWN_X, PLAYER_SPAWN_Y, 40, 40, 4)
 enemy_manager = EnemyManager(player_tank, enemy_bullets)
 score_manager = ScoreManager()
+super_enemy_manager = SuperEnemyManager(player_tank, enemy_bullets)
 
 for _ in range(10):
     while True:
@@ -92,8 +97,15 @@ while running:
                 obj.draw(window)
 
             player_tank.update()
-            bullets.update()
+            bullets.update(enemy_manager, score_manager, super_enemy_manager)
             enemy_bullets.update()
+
+            if current_level and current_level.base:
+                base_hits = pygame.sprite.spritecollide(current_level.base, enemy_bullets, True)
+                if base_hits:
+                    game_over = True
+                    end_screen = EndGameScreen(window, "GAME OVER", score_manager.score)
+
             enemy_manager.update()
         else:
 
@@ -105,21 +117,45 @@ while running:
         pygame.sprite.groupcollide(bullets, enemy_bullets, True, True)
         bullets.draw(window)
         enemy_bullets.draw(window)
-        enemy_manager.draw(window)
-        panel.draw(window, paused, lives)
+        panel.draw(window, paused, player_tank)
         score_manager.draw(window)
+
+        if score_manager.score < 1000:
+            enemy_manager.update()
+            enemy_manager.draw(window)
+        else:
+            super_enemy_manager.update()
+            super_enemy_manager.draw(window)
 
         # Add pause text
         if paused:
-            overlay = pygame.Surface((GAME_WIDTH, SCREEN_HEIGHT))
-            overlay.set_alpha(180)
-            overlay.fill((0, 0, 0))
-            window.blit(overlay, (0, 0))
+            window.fill((30, 30, 30))
 
             pause_font = pygame.font.SysFont("Courier New", 72, bold=True)
             pause_text = pause_font.render("PAUSED", True, WHITE_COLOR)
-            pause_rect = pause_text.get_rect(center=(GAME_WIDTH // 2, SCREEN_HEIGHT // 2))
+            pause_rect = pause_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 50))
             window.blit(pause_text, pause_rect)
+
+            # Кнопка Resume
+            resume_button = pygame.Rect(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 + 20, 200, 60)
+            pygame.draw.rect(window, GRAY, resume_button)
+            pygame.draw.rect(window, WHITE_COLOR, resume_button, 3)
+
+            button_font = pygame.font.SysFont("Courier New", 36)
+            text_surface = button_font.render("RESUME", True, WHITE_COLOR)
+            text_rect = text_surface.get_rect(center=resume_button.center)
+            window.blit(text_surface, text_rect)
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    if resume_button.collidepoint(event.pos):
+                        paused = False
+
+            pygame.display.update()
+            clock.tick(FPS)
+            continue
 
         for obj in game_objects:
             obj.update()
@@ -128,17 +164,61 @@ while running:
         player_tank.update()
         player_tank.reset(window)
 
-        bullets.update(enemy_manager, score_manager)
-        bullets.update()
+        bullets.update(enemy_manager, score_manager, super_enemy_manager)
 
         pygame.sprite.groupcollide(bullets, enemy_bullets, True, True)
 
         bullets.draw(window)
         enemy_bullets.draw(window)
-        panel.draw(window, paused, lives)
-        enemy_manager.update()
-        enemy_manager.draw(window)
+        panel.draw(window, paused, player_tank)
         score_manager.draw(window)
+
+        if player_tank.lives <= 0 and not game_over:
+            game_over = True
+            end_screen = EndGameScreen(window, "GAME OVER", score_manager.score)
+
+        if score_manager.score >= WIN_SCORE and not you_win:
+            you_win = True
+            end_screen = EndGameScreen(window, "YOU WIN!", score_manager.score)
+
+        if game_over or you_win:
+            window.fill((30, 30, 30))
+            end_screen.draw()
+            pygame.display.update()
+
+            waiting_for_input = True
+            while waiting_for_input:
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        running = False
+                        waiting_for_input = False
+                    result = end_screen.handle_event(event)
+                    if result == "retry":
+                        player_tank.lives = 3
+                        score_manager.reset()
+                        player_tank.reset_position()
+                        enemy_manager.reset()
+                        super_enemy_manager.reset()
+                        bullets.empty()
+                        enemy_bullets.empty()
+                        game_over = False
+                        you_win = False
+                        current_level.reset()
+                        end_screen = None
+                        waiting_for_input = False
+                    elif result == "exit":
+                        game_over = False
+                        you_win = False
+                        in_level_select_menu = True
+                        current_level = None
+                        bullets.empty()
+                        game_objects.clear()
+                        end_screen = None
+                        waiting_for_input = False
+
+                clock.tick(FPS)
+            continue
+        
 
     pygame.display.update()
     clock.tick(FPS)
