@@ -20,7 +20,7 @@ pygame.init()
 pygame.mixer.init()
 
 pygame.mixer.music.load('sounds/batle city music.mp3')
-pygame.mixer.music.set_volume(0.5)
+pygame.mixer.music.set_volume(0.3)
 pygame.mixer.music.play(-1)
 
 bullet_sound = pygame.mixer.Sound('sounds/bullet_sound.wav')
@@ -135,16 +135,16 @@ while running:
             super_enemy_manager.update()
             super_enemy_manager.draw(window)
 
-        # Add pause text
         if paused:
-            overlay = pygame.Surface((GAME_WIDTH, SCREEN_HEIGHT))
+            window.fill((30, 30, 30))
+            overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
             overlay.set_alpha(180)
             overlay.fill((0, 0, 0))
             window.blit(overlay, (0, 0))
 
             pause_font = pygame.font.SysFont("Courier New", 72, bold=True)
             pause_text = pause_font.render("PAUSED", True, WHITE_COLOR)
-            pause_rect = pause_text.get_rect(center=(GAME_WIDTH // 2, SCREEN_HEIGHT // 2))
+            pause_rect = pause_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 50))
             window.blit(pause_text, pause_rect)
 
             resume_button = pygame.Rect(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 + 20, 200, 60)
