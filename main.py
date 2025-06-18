@@ -17,6 +17,13 @@ bullets = pygame.sprite.Group()
 enemy_bullets = pygame.sprite.Group()
 
 pygame.init()
+pygame.mixer.init()
+
+pygame.mixer.music.load('sounds/batle city music.mp3')
+pygame.mixer.music.set_volume(0.5)
+pygame.mixer.music.play(-1)
+
+bullet_sound = pygame.mixer.Sound('sounds/bullet_sound.wav')
 
 window = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_icon(pygame.image.load('textures/leaves.png'))
@@ -57,6 +64,7 @@ while running:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:
                 player_tank.fire(bullets)
+                bullet_sound.play()
 
         if in_main_menu:
             result = menu.handle_event(event)
