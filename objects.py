@@ -3,6 +3,10 @@ import random
 
 from settings import *
 
+
+pygame.mixer.init()
+enemy_death = pygame.mixer.Sound('sounds/enemy_death.wav')
+
 game_objects = []
 decorations = []
 
@@ -203,6 +207,7 @@ class Bullet(GameSprite):
             if self.rect.colliderect(enemy.rect):
                 self.kill()
                 enemy.kill()
+                enemy_death.play()
                 score_manager.add_score(100)
                 break
 
