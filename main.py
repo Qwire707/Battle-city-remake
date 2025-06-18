@@ -13,7 +13,7 @@ paused = False
 game_over = False
 you_win = False
 end_screen = None
-bullets = pygame.sprite.Group() 
+bullets = pygame.sprite.Group()
 enemy_bullets = pygame.sprite.Group()
 
 pygame.init()
@@ -129,14 +129,16 @@ while running:
 
         # Add pause text
         if paused:
-            window.fill((30, 30, 30))
+            overlay = pygame.Surface((GAME_WIDTH, SCREEN_HEIGHT))
+            overlay.set_alpha(180)
+            overlay.fill((0, 0, 0))
+            window.blit(overlay, (0, 0))
 
             pause_font = pygame.font.SysFont("Courier New", 72, bold=True)
             pause_text = pause_font.render("PAUSED", True, WHITE_COLOR)
-            pause_rect = pause_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 50))
+            pause_rect = pause_text.get_rect(center=(GAME_WIDTH // 2, SCREEN_HEIGHT // 2))
             window.blit(pause_text, pause_rect)
 
-            # Кнопка Resume
             resume_button = pygame.Rect(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 + 20, 200, 60)
             pygame.draw.rect(window, GRAY, resume_button)
             pygame.draw.rect(window, WHITE_COLOR, resume_button, 3)
@@ -218,7 +220,7 @@ while running:
 
                 clock.tick(FPS)
             continue
-        
+
 
     pygame.display.update()
     clock.tick(FPS)

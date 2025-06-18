@@ -6,7 +6,6 @@ from settings import *
 game_objects = []
 decorations = []
 
-
 class GameSprite(pygame.sprite.Sprite):
     def __init__(self, img, x, y, width, height, speed):
         super().__init__()
@@ -20,7 +19,6 @@ class GameSprite(pygame.sprite.Sprite):
 
     def reset(self, surface):
         surface.blit(self.image, (self.rect.x, self.rect.y))
-
 
 class Block1:
     def __init__(self, px, py, size):
@@ -40,7 +38,6 @@ class Block1:
         self.hp -= value
         if self.hp <= 0:
             game_objects.remove(self)
-
 
 class Block2:
     def __init__(self, px, py, size):
@@ -209,6 +206,7 @@ class Bullet(GameSprite):
                 score_manager.add_score(100)
                 break
 
+
         for super_enemy in super_enemy_manager.super_enemies:
             if self.rect.colliderect(super_enemy.rect):
                 super_enemy.health -= 1
@@ -218,7 +216,6 @@ class Bullet(GameSprite):
                 self.kill()
                 break
 
-        # Collision with blocks
         for block in game_objects:
             if block.rect.colliderect(self.rect):
                 block.damage(1)
@@ -248,7 +245,6 @@ class EnemyManager:
         self.max_enemies = 3
         self.player_tank = player_tank
         self.enemy_bullets = enemy_bullets
-        self.spawn_timer = 0
 
     def spawn_enemy(self):
         enemy = Enemy_Tank(random.randint(0, GAME_WIDTH - 60), 0, self.player_tank, self.enemy_bullets)
@@ -326,7 +322,6 @@ class Enemy_Tank(GameSprite):
     def fire(self):
         bullet = EnemyBullet("textures/bullet.png", self.rect.centerx, self.rect.centery, 15, 20, 5, self.direction, self.player_tank)
         self.enemy_bullets.add(bullet)
-
 
 class EnemyBullet(GameSprite):
     def __init__(self, image, x, y, width, height, speed, direction, player_tank):
@@ -423,7 +418,7 @@ class SuperEnemyTank(GameSprite):
 class ScoreManager:
     def __init__(self):
         self.score = 0
-        self.font = pygame.font.SysFont("Courier New", 24, bold=True)
+        self.font = pygame.font.SysFont("Courier New", 28, bold=True)
 
     def add_score(self, points):
         self.score += points
